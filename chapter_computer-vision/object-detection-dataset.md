@@ -1,91 +1,207 @@
-# 目标检测数据集（皮卡丘）
+# 目标检测数据集
+:label:`sec_object-detection-dataset`
 
-在目标检测领域并没有类似MNIST或Fashion-MNIST那样的小数据集。为了快速测试模型，我们合成了一个小的数据集。我们首先使用一个开源的皮卡丘3D模型生成了1,000张不同角度和大小的皮卡丘图像。然后我们收集了一系列背景图像，并在每张图的随机位置放置一张随机的皮卡丘图像。我们使用MXNet提供的im2rec工具将图像转换成二进制的RecordIO格式 [1]。该格式既可以降低数据集在磁盘上的存储开销，又能提高读取效率。如果想了解更多的图像读取方法，可以查阅GluonCV工具包的文档 [2]。
+目标检测领域没有像 MNIST 和 Fashion-MNIST 那样的小数据集。
+为了快速测试目标检测模型，[**我们收集并标记了一个小型数据集**]。
+首先，我们拍摄了一组香蕉的照片，并生成了 1000 张不同角度和大小的香蕉图像。
+然后，我们在一些背景图片的随机位置上放一张香蕉的图像。
+最后，我们在图片上为这些香蕉标记了边界框。 
 
+## [**下载数据集**]
 
-## 获取数据集
+包含所有图像和 csv 标签文件的香蕉检测数据集可以直接从互联网下载。
 
-RecordIO格式的皮卡丘数据集可以直接在网上下载。获取数据集的操作定义在`_download_pikachu`函数中。
-
-```{.python .input  n=1}
+```{.python .input}
 %matplotlib inline
-import d2lzh as d2l
-from mxnet import gluon, image
-from mxnet.gluon import utils as gutils
+from d2l import mxnet as d2l
+from mxnet import gluon, image, np, npx
 import os
+import pandas as pd
 
-def _download_pikachu(data_dir):
-    root_url = ('https://apache-mxnet.s3-accelerate.amazonaws.com/'
-                'gluon/dataset/pikachu/')
-    dataset = {'train.rec': 'e6bcb6ffba1ac04ff8a9b1115e650af56ee969c8',
-               'train.idx': 'dcf7318b2602c06428b9988470c731621716c393',
-               'val.rec': 'd6c33f799b4d058e82f2cb5bd9a976f69d72d520'}
-    for k, v in dataset.items():
-        gutils.download(root_url + k, os.path.join(data_dir, k), sha1_hash=v)
+npx.set_np()
+```
+
+```{.python .input}
+#@tab pytorch
+%matplotlib inline
+from d2l import torch as d2l
+import torch
+import torchvision
+import os
+import pandas as pd
+```
+
+```{.python .input}
+#@tab all
+#@save
+d2l.DATA_HUB['banana-detection'] = (
+    d2l.DATA_URL + 'banana-detection.zip',
+    '5de26c8fce5ccdea9f91267273464dc968d20d72')
 ```
 
 ## 读取数据集
 
-我们通过创建`ImageDetIter`实例来读取目标检测数据集。其中名称里的“Det”指的是Detection（检测）。我们将以随机顺序读取训练数据集。由于数据集的格式为RecordIO，我们需要提供图像索引文件train.idx以随机读取小批量。此外，对于训练集中的每张图像，我们将采用随机裁剪，并要求裁剪出的图像至少覆盖每个目标95%的区域。由于裁剪是随机的，这个要求不一定总被满足。我们设定最多尝试200次随机裁剪：如果都不符合要求则不裁剪图像。为保证输出结果的确定性，我们不随机裁剪测试数据集中的图像。我们也无须按随机顺序读取测试数据集。
+通过 `read_data_bananas` 函数，我们[**读取香蕉检测数据集**]。
+该数据集包括一个的 csv 文件，内含目标类别标签和位于左上角和右下角的真实边界框坐标。
 
-```{.python .input  n=2}
-# 本函数已保存在d2lzh包中方便以后使用
-def load_data_pikachu(batch_size, edge_size=256):  # edge_size：输出图像的宽和高
-    data_dir = '../data/pikachu'
-    _download_pikachu(data_dir)
-    train_iter = image.ImageDetIter(
-        path_imgrec=os.path.join(data_dir, 'train.rec'),
-        path_imgidx=os.path.join(data_dir, 'train.idx'),
-        batch_size=batch_size,
-        data_shape=(3, edge_size, edge_size),  # 输出图像的形状
-        shuffle=True,  # 以随机顺序读取数据集
-        rand_crop=1,  # 随机裁剪的概率为1
-        min_object_covered=0.95, max_attempts=200)
-    val_iter = image.ImageDetIter(
-        path_imgrec=os.path.join(data_dir, 'val.rec'), batch_size=batch_size,
-        data_shape=(3, edge_size, edge_size), shuffle=False)
+```{.python .input}
+#@save
+def read_data_bananas(is_train=True):
+    """读取香蕉检测数据集中的图像和标签。"""
+    data_dir = d2l.download_extract('banana-detection')
+    csv_fname = os.path.join(data_dir, 'bananas_train' if is_train
+                             else 'bananas_val', 'label.csv')
+    csv_data = pd.read_csv(csv_fname)
+    csv_data = csv_data.set_index('img_name')
+    images, targets = [], []
+    for img_name, target in csv_data.iterrows():
+        images.append(image.imread(
+            os.path.join(data_dir, 'bananas_train' if is_train else
+                         'bananas_val', 'images', f'{img_name}')))
+        # Here `target` contains (class, upper-left x, upper-left y,
+        # lower-right x, lower-right y), where all the images have the same
+        # banana class (index 0)
+        targets.append(list(target))
+    return images, np.expand_dims(np.array(targets), 1) / 256
+```
+
+```{.python .input}
+#@tab pytorch
+#@save
+def read_data_bananas(is_train=True):
+    """读取香蕉检测数据集中的图像和标签。"""
+    data_dir = d2l.download_extract('banana-detection')
+    csv_fname = os.path.join(data_dir, 'bananas_train' if is_train
+                             else 'bananas_val', 'label.csv')
+    csv_data = pd.read_csv(csv_fname)
+    csv_data = csv_data.set_index('img_name')
+    images, targets = [], []
+    for img_name, target in csv_data.iterrows():
+        images.append(torchvision.io.read_image(
+            os.path.join(data_dir, 'bananas_train' if is_train else
+                         'bananas_val', 'images', f'{img_name}')))
+        # Here `target` contains (class, upper-left x, upper-left y,
+        # lower-right x, lower-right y), where all the images have the same
+        # banana class (index 0)
+        targets.append(list(target))
+    return images, torch.tensor(targets).unsqueeze(1) / 256
+```
+
+通过使用 `read_data_bananas` 函数读取图像和标签，以下 `BananasDataset` 类别将允许我们[**创建一个自定义 `Dataset` 实例**]来加载香蕉检测数据集。
+
+```{.python .input}
+#@save
+class BananasDataset(gluon.data.Dataset):
+    """一个用于加载香蕉检测数据集的自定义数据集。"""
+    def __init__(self, is_train):
+        self.features, self.labels = read_data_bananas(is_train)
+        print('read ' + str(len(self.features)) + (f' training examples' if
+              is_train else f' validation examples'))
+
+    def __getitem__(self, idx):
+        return (self.features[idx].astype('float32').transpose(2, 0, 1),
+                self.labels[idx])
+
+    def __len__(self):
+        return len(self.features)
+```
+
+```{.python .input}
+#@tab pytorch
+#@save
+class BananasDataset(torch.utils.data.Dataset):
+    """一个用于加载香蕉检测数据集的自定义数据集。"""
+    def __init__(self, is_train):
+        self.features, self.labels = read_data_bananas(is_train)
+        print('read ' + str(len(self.features)) + (f' training examples' if
+              is_train else f' validation examples'))
+
+    def __getitem__(self, idx):
+        return (self.features[idx].float(), self.labels[idx])
+
+    def __len__(self):
+        return len(self.features)
+```
+
+最后，我们定义 `load_data_bananas` 函数，来[**为训练集和测试集返回两个数据加载器实例**]。对于测试集，无需按随机顺序读取它。
+
+```{.python .input}
+#@save
+def load_data_bananas(batch_size):
+    """加载香蕉检测数据集。"""
+    train_iter = gluon.data.DataLoader(BananasDataset(is_train=True),
+                                       batch_size, shuffle=True)
+    val_iter = gluon.data.DataLoader(BananasDataset(is_train=False),
+                                     batch_size)
     return train_iter, val_iter
 ```
 
-下面我们读取一个小批量并打印图像和标签的形状。图像的形状和之前实验中的一样，依然是(批量大小, 通道数, 高, 宽)。而标签的形状则是(批量大小, $m$, 5)，其中$m$等于数据集中单个图像最多含有的边界框个数。小批量计算虽然高效，但它要求每张图像含有相同数量的边界框，以便放在同一个批量中。由于每张图像含有的边界框个数可能不同，我们为边界框个数小于$m$的图像填充非法边界框，直到每张图像均含有$m$个边界框。这样，我们就可以每次读取小批量的图像了。图像中每个边界框的标签由长度为5的数组表示。数组中第一个元素是边界框所含目标的类别。当值为-1时，该边界框为填充用的非法边界框。数组的剩余4个元素分别表示边界框左上角的$x$和$y$轴坐标以及右下角的$x$和$y$轴坐标（值域在0到1之间）。这里的皮卡丘数据集中每个图像只有一个边界框，因此$m=1$。
-
-```{.python .input  n=3}
-batch_size, edge_size = 32, 256
-train_iter, _ = load_data_pikachu(batch_size, edge_size)
-batch = train_iter.next()
-batch.data[0].shape, batch.label[0].shape
+```{.python .input}
+#@tab pytorch
+#@save
+def load_data_bananas(batch_size):
+    """加载香蕉检测数据集。"""
+    train_iter = torch.utils.data.DataLoader(BananasDataset(is_train=True),
+                                             batch_size, shuffle=True)
+    val_iter = torch.utils.data.DataLoader(BananasDataset(is_train=False),
+                                           batch_size)
+    return train_iter, val_iter
 ```
 
-## 图示数据
+让我们[**读取一个小批量，并打印其中的图像和标签的形状**]。
+图像的小批量的形状为（批量大小、通道数、高度、宽度），看起来很眼熟：它与我们之前图像分类任务中的相同。
+标签的小批量的形状为（批量大小，$m$，5），其中 $m$ 是数据集的任何图像中边界框可能出现的最大数量。 
 
-我们画出10张图像和它们中的边界框。可以看到，皮卡丘的角度、大小和位置在每张图像中都不一样。当然，这是一个简单的人工数据集。实际中的数据通常会复杂得多。
+小批量计算虽然高效，但它要求每张图像含有相同数量的边界框，以便放在同一个批量中。
+通常来说，图像可能拥有不同数量个边界框；因此，在达到 $m$ 之前，边界框少于 $m$ 的图像将被非法边界框填充。
+这样，每个边界框的标签将被长度为 5 的数组表示。
+数组中的第一个元素是边界框中对象的类别，其中 -1 表示用于填充的非法边界框。
+数组的其余四个元素是边界框左上角和右下角的 ($x$, $y$) 坐标值（值域在0到1之间）。
+对于香蕉数据集而言，由于每张图像上只有一个边界框，因此 $m=1$。
 
-```{.python .input  n=4}
-imgs = (batch.data[0][0:10].transpose((0, 2, 3, 1))) / 255
-axes = d2l.show_images(imgs, 2, 5).flatten()
-for ax, label in zip(axes, batch.label[0][0:10]):
+```{.python .input}
+#@tab all
+batch_size, edge_size = 32, 256
+train_iter, _ = load_data_bananas(batch_size)
+batch = next(iter(train_iter))
+batch[0].shape, batch[1].shape
+```
+
+## [**示范**]
+
+让我们展示 10 幅带有真实边界框的图像。
+我们可以看到在所有这些图像中香蕉的旋转角度、大小和位置都有所不同。
+当然，这只是一个简单的人工数据集，实践中真实世界的数据集通常要复杂得多。
+
+```{.python .input}
+imgs = (batch[0][0:10].transpose(0, 2, 3, 1)) / 255
+axes = d2l.show_images(imgs, 2, 5, scale=2)
+for ax, label in zip(axes, batch[1][0:10]):
+    d2l.show_bboxes(ax, [label[0][1:5] * edge_size], colors=['w'])
+```
+
+```{.python .input}
+#@tab pytorch
+imgs = (batch[0][0:10].permute(0, 2, 3, 1)) / 255
+axes = d2l.show_images(imgs, 2, 5, scale=2)
+for ax, label in zip(axes, batch[1][0:10]):
     d2l.show_bboxes(ax, [label[0][1:5] * edge_size], colors=['w'])
 ```
 
 ## 小结
 
-* 合成的皮卡丘数据集可用于测试目标检测模型。
-* 目标检测的数据读取与图像分类的类似。然而，在引入边界框后，标签形状和图像增广（如随机裁剪）发生了变化。
-
+* 我们收集的香蕉检测数据集可用于演示目标检测模型。
+* 用于目标检测的数据加载与图像分类的数据加载类似。但是，在目标检测中，标签还包含真实边界框的信息，它不出现在图像分类中。
 
 ## 练习
 
-* 查阅MXNet文档，`image.ImageDetIter`和`image.CreateDetAugmenter`这两个类的构造函数有哪些参数？它们的意义是什么？
+1. 在香蕉检测数据集中演示其他带有真实边界框的图像。它们在边界框和目标方面有什么不同？
+1. 假设我们想要将数据增强（例如随机裁剪）应用于目标检测。它与图像分类中的有什么不同？提示：如果裁剪的图像只包含物体的一小部分会怎样？
 
+:begin_tab:`mxnet`
+[Discussions](https://discuss.d2l.ai/t/3203)
+:end_tab:
 
-
-
-## 参考文献
-
-[1] im2rec工具。https://github.com/apache/incubator-mxnet/blob/master/tools/im2rec.py
-
-[2] GluonCV 工具包。https://gluon-cv.mxnet.io/
-
-## 扫码直达[讨论区](https://discuss.gluon.ai/t/topic/7022)
-
-![](../img/qr_object-detection-dataset.svg)
+:begin_tab:`pytorch`
+[Discussions](https://discuss.d2l.ai/t/3202)
+:end_tab:

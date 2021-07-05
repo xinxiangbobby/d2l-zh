@@ -1,19 +1,16 @@
 # 计算性能
+:label:`chap_performance`
 
-在深度学习中，数据集通常很大而且模型计算往往很复杂。因此，我们十分关注计算性能。本章将重点介绍影响计算性能的重要因子：命令式编程、符号式编程、异步计算、自动并行计算和多GPU计算。通过本章的学习，你将很可能进一步提升前几章已实现的模型的计算性能，例如，在不影响模型精度的前提下减少模型的训练时间。
+在深度学习中，数据集和模型通常都很大，导致计算量也会很大。因此，计算的性能非常重要。本章将集中讨论影响计算性能的主要因素：命令式编程、符号编程、异步计算、自动并行和多GPU计算。通过学习本章，你可以进一步提高前几章中实现的那些模型的计算性能。例如，我们可以在不影响准确性的前提下，减少训练时间。
 
-```eval_rst
+```toc
+:maxdepth: 2
 
-.. toctree::
-   :maxdepth: 2
-
-   hybridize
-   async-computation
-   auto-parallelism
-   multiple-gpus
-   multiple-gpus-gluon
+hybridize
+async-computation
+auto-parallelism
+hardware
+multiple-gpus
+multiple-gpus-concise
+parameterserver
 ```
-
-
-
-

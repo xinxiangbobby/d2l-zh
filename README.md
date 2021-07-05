@@ -1,16 +1,16 @@
-# 动手学深度学习（Dive into Deep Learning，D2L）
+# 动手学深度学习（Dive into Deep Learning，D2L.ai）
 
 [![Build Status](http://ci.d2l.ai/job/d2l-zh/job/master/badge/icon)](http://ci.d2l.ai/job/d2l-zh/job/master/)
 
-[本书网址：zh.d2l.ai](https://zh.d2l.ai/) |  [如何安装和使用书中源代码](https://zh.d2l.ai/chapter_prerequisite/install.html)
+[第一版：zh.D2L.ai](https://zh.d2l.ai/) |  [第二版预览版：zh-v2.D2L.ai](https://zh-v2.d2l.ai)  | 安装和使用书中源代码：[第一版](https://zh.d2l.ai/chapter_prerequisite/install.html) [第二版](https://zh-v2.d2l.ai/chapter_installation/index.html) | 当前版本: v2.0.0-alpha1
 
 <h5 align="center"><i>理解深度学习的最佳方法是学以致用。</i></h5>
 
 <p align="center">
-  <img width="200"  src="img/frontpage/eq.jpg">
-  <img width="200"  src="img/frontpage/figure.jpg">
-  <img width="200"  src="img/frontpage/code.jpg">
-  <img width="200"  src="img/frontpage/notebook.gif">
+  <img width="200"  src="static/frontpage/_images/eq.jpg">
+  <img width="200"  src="static/frontpage/_images/figure.jpg">
+  <img width="200"  src="static/frontpage/_images/code.jpg">
+  <img width="200"  src="static/frontpage/_images/notebook.gif">
 </p>
 
 本开源项目代表了我们的一种尝试：我们将教给读者概念、背景知识和代码；我们将在同一个地方阐述剖析问题所需的批判性思维、解决问题所需的数学知识，以及实现解决方案所需的工程技能。
@@ -30,17 +30,17 @@
 如果本书对你有帮助，请Star (★) 本仓库或引用本书的英文版：
 
 ```
-@book{zhang2020dive,
+@article{zhang2021dive,
     title={Dive into Deep Learning},
-    author={Aston Zhang and Zachary C. Lipton and Mu Li and Alexander J. Smola},
-    note={\url{https://d2l.ai}},
-    year={2020}
+    author={Zhang, Aston and Lipton, Zachary C. and Li, Mu and Smola, Alexander J.},
+    journal={arXiv preprint arXiv:2106.11342},
+    year={2021}
 }
 ```
 
 ## 本书的第二版
 
-虽然纸质书第一版已经出版，但深度学习领域依然在迅速发展。为了得到来自更广泛的英文开源社区的帮助，从而提升本书质量，本书的第二版正在用英文写。当英文版完成并改进后，我们再把它搬回中文版。
+虽然纸质书第一版已经出版，但深度学习领域依然在迅速发展。为了得到来自更广泛的英文开源社区的帮助，从而提升本书质量，本书的第二版正在用英文写。英文版正不断被搬回中文版中。
 
 目前，英文版已超过160节（中文版共96节），例如增加了理论背景（如优化收敛分析）、硬件设计（如参数服务器）、全新篇章（如注意力机制、推荐系统、深度学习的数学、生成对抗网络）、应用种类（如自然语言推理）、模型种类（如Transformer、BERT）等，并优化重组了大量章节（如将自然语言处理篇章按从预训练表征、到模型设计、再到下游应用重构）。
 
